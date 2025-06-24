@@ -1,4 +1,5 @@
 import React from 'react';
+// The import for 'next/link' has been removed to resolve the error.
 import {
   Card,
   CardContent,
@@ -6,33 +7,34 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/card'; // Assuming these paths are correct
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, MapPin, Clock } from 'lucide-react';
-import { EnrollForm } from './enroll-form';
+import { Users } from 'lucide-react';
 
-export default interface Event {
+export interface Event {
   id: string;
   name: string;
   description: string;
   max_cap: number;
 }
 
-interface EventCardProps {
+interface OwnerEventCardProps {
   event: Event;
-  currentParticipants?: number; // Optional: to show current vs max capacity
-  onJoin?: (eventId: string) => void;
-  onViewDetails?: (eventId: string) => void;
+  currentParticipants?: number;
+  isDetailPage?: boolean; // If true, the card is being used on a detail page.
+  onEdit?: (eventId: string) => void;
 }
 
-export function EventCard({ 
+export function OwnerEventCard({ 
   event, 
   currentParticipants = 0, 
-  onJoin
-}: EventCardProps) {
+  isDetailPage = false, // Default to false (list view behavior)
+  onEdit,
+}: OwnerEventCardProps) {
   const isFullCapacity = currentParticipants >= event.max_cap;
-  const capacityPercentage = (currentParticipants / event.max_cap) * 100;
+  // Prevent division by zero if max_cap is 0
+  const capacityPercentage = event.max_cap > 0 ? (currentParticipants / event.max_cap) * 100 : 0;
 
   return (
     <Card className="w-full max-w-5xl hover:shadow-lg transition-shadow duration-200">
@@ -48,8 +50,10 @@ export function EventCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Description */}
-        <CardDescription className="text-sm text-muted-foreground line-clamp-3">
+        {/* Description: Show full text on detail page, clamp on list view. */}
+        <CardDescription 
+          className={`text-sm text-muted-foreground ${!isDetailPage ? 'line-clamp-3' : ''}`}
+        >
           {event.description}
         </CardDescription>
 
@@ -86,8 +90,20 @@ export function EventCard({
         </div>
       </CardContent>
 
-      <CardFooter className="flex gap-2">
-        <EnrollForm />
+      {/* Footer: The logic is now corrected. It uses a standard <a> tag for navigation. */}
+      <CardFooter>
+        {isDetailPage ? (
+          <Button className="w-full py-6" onClick={() => onEdit?.(event.id)}>
+            แก้ไขข้อมูลกิจกรรม
+          </Button>
+        ) : (
+          // Using a standard anchor tag <a> for the link to avoid build errors.
+          <a href={`/events/${event.id}`} className="w-full">
+            <Button className="w-full py-6">
+              ดูข้อมูล
+            </Button>
+          </a>
+        )}
       </CardFooter>
     </Card>
   );

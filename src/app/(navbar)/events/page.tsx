@@ -3,6 +3,7 @@
 import { EnrollmentCard } from "@/components/enrollment-card";
 import { EventCard } from "@/components/event-card"
 import { JoinedEventCard } from "@/components/joined-event-card"
+import { OwnerEventCard } from "@/components/owner-event-card"
 import { Button } from "@/components/ui/button";
 import {
     Tabs,
@@ -74,7 +75,7 @@ export default function EventsPage() {
                         <TabsList>
                             <TabsTrigger value="all">ยังไม่ลงทะเบียน</TabsTrigger>
                             <TabsTrigger value="test">TEST</TabsTrigger>
-                            <TabsTrigger value="joined">ลงทะเบียนไปแล้ว</TabsTrigger>
+                            <TabsTrigger value="owner">OWNER</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="all">
@@ -102,16 +103,13 @@ export default function EventsPage() {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="joined">
+                        <TabsContent value="owner">
                             <div className="flex flex-col gap-4">
-                                {enrollments.map((enrollment, index) => (
-                                    <EnrollmentCard
-                                        key={enrollment.id}
-                                        enrollment={enrollment}
-                                        eventName="Workshop React & Next.js"
-                                        onEdit={(id) => console.log('Edit:', id)}
-                                        onDelete={(id) => console.log('Delete:', id)}
-                                        onStatusChange={(id, status) => console.log('Status change:', id, status)}
+                                {events.map((event, index) => (
+                                    <OwnerEventCard
+                                        key={event.id}
+                                        event={event}
+                                        currentParticipants={index === 0 ? 25 : index === 1 ? 48 : 5} // Sample data
                                     />
                                 ))}
                             </div>
