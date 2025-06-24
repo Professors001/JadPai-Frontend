@@ -3,6 +3,7 @@
 import { EnrollmentCard } from "@/components/enrollment-card";
 import { EventCard } from "@/components/event-card"
 import { JoinedEventCard } from "@/components/joined-event-card"
+import { Button } from "@/components/ui/button";
 import {
     Tabs,
     TabsContent,
@@ -13,6 +14,7 @@ import { Enrollment } from "@/interfaces/Enrollment";
 import { Event } from "@/interfaces/Event";
 
 import { useEffect, useState } from "react";
+import { CreateEventForm } from "@/components/create-event-form";
 
 export default function EventsPage() {
 
@@ -64,7 +66,10 @@ export default function EventsPage() {
     return (
         <div className="flex items-center justify-center pt-16">
             <div className="flex flex-col items-center justify-center w-5xl">
-                <div className="w-full flex flex-col">
+                <div className="w-full flex flex-col gap-4">
+                    
+                    <CreateEventForm />
+
                     <Tabs defaultValue="all">
                         <TabsList>
                             <TabsTrigger value="all">ยังไม่ลงทะเบียน</TabsTrigger>

@@ -16,7 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { email } from "zod/v4-mini"
 
 const FormSchema = z.object({
   name: z.string().min(1, {

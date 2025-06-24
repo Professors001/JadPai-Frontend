@@ -6,6 +6,5 @@ export interface User {
     phone : string;
     password_hash : string;
     role : string;
-    img_path : string;
     created_at : Date;
 }
