@@ -87,7 +87,7 @@ export function EventCard({
       </CardContent>
 
       <CardFooter className="flex gap-2">
-        <EnrollForm />
+        <EnrollForm  eventId={event.id}/>
       </CardFooter>
     </Card>
   );

@@ -5,6 +5,7 @@ import { Event } from '@/interfaces/Event';
 import { OwnerEventCard } from '@/components/owner-event-card';
 import { Enrollment } from '@/interfaces/Enrollment';
 import { EnrollmentCard } from '@/components/enrollment-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 
@@ -12,6 +13,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
     const [event, setEvent] = useState<Event | null>(null);
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+    const [enrollments2, setEnrollments2] = useState<Enrollment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -84,16 +86,57 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
                 <h2 className="text-xl font-bold">ผู้เข้าร่วม</h2>
 
-                {enrollments.map((enrollment, index) => (
-                    <EnrollmentCard
-                        key={enrollment.id}
-                        enrollment={enrollment}
-                        eventName="Workshop React & Next.js"
-                        onEdit={(id) => console.log('Edit:', id)}
-                        onDelete={(id) => console.log('Delete:', id)}
-                        onStatusChange={(id, status) => console.log('Status change:', id, status)}
-                    />
-                ))}
+                <Tabs defaultValue="all">
+                        <TabsList>
+                            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
+                            <TabsTrigger value="waitlisted">ยังไม่อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="appoved">อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="not_appoved">ไม่อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="cancelled">ยกเลิก</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="all">
+                            <div className="flex flex-col gap-3">
+                                {enrollments.map((enrollment, index) => (
+                                    <EnrollmentCard
+                                        key={enrollment.id}
+                                        enrollment={enrollment}
+                                        onEdit={(id) => console.log('Edit:', id)}
+                                        onDelete={(id) => console.log('Delete:', id)}
+                                        onStatusChange={(id, status) => console.log('Status change:', id, status)}
+                                    />
+                                ))}
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="waitlisted">
+                            {enrollments2.length === 0 ? (
+                                <p>ยังไม่มีผู้เข้าร่วม</p>
+                            ) : 
+                            enrollments2.map((enrollment, index) => (
+                                <EnrollmentCard
+                                    key={enrollment.id}
+                                    enrollment={enrollment}
+                                    onEdit={(id) => console.log('Edit:', id)}
+                                    onDelete={(id) => console.log('Delete:', id)}
+                                    onStatusChange={(id, status) => console.log('Status change:', id, status)}
+                                />
+                            ))}
+                            
+                        </TabsContent>
+
+                        <TabsContent value="appoved">
+                            
+                        </TabsContent>
+
+                        <TabsContent value="not_appoved">
+                            
+                        </TabsContent>
+
+                        <TabsContent value="cancelled">
+                            
+                        </TabsContent>
+                    </Tabs>
             </div>
         </div>
     );

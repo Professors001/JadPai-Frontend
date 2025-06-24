@@ -11,16 +11,16 @@ import {
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
-import { Enrollment } from "@/interfaces/Enrollment";
 import { Event } from "@/interfaces/Event";
 
 import { useEffect, useState } from "react";
 import { CreateEventForm } from "@/components/create-event-form";
+import { EnrollmentWithEvent } from "@/dtos/EnrollmentDtos";
 
 export default function EventsPage() {
 
     const [events, setEvents] = useState<Event[]>([]);
-    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+    const [enrollments, setEnrollments] = useState<EnrollmentWithEvent[]>([]);
     async function fetchEvents() {
         try {
             const res = await fetch(`http://localhost:6969/events`);
@@ -40,7 +40,7 @@ export default function EventsPage() {
 
     async function fetchEnrollment() {
         try {
-            const res = await fetch(`http://localhost:6969/enrollments`);
+            const res = await fetch(`http://localhost:6969/enrollments/users/2`); // MockUp UID
             
             if (!res.ok) {
                 throw new Error('Failed to fetch Enrollment');
@@ -74,12 +74,12 @@ export default function EventsPage() {
                     <Tabs defaultValue="all">
                         <TabsList>
                             <TabsTrigger value="all">ยังไม่ลงทะเบียน</TabsTrigger>
-                            <TabsTrigger value="test">TEST</TabsTrigger>
+                            <TabsTrigger value="joined">ลงทะเบียนแล้ว</TabsTrigger>
                             <TabsTrigger value="owner">OWNER</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="all">
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 {events.map((event, index) => (
                                     <EventCard
                                         key={event.id}
@@ -91,8 +91,8 @@ export default function EventsPage() {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="test">
-                            <div className="flex flex-col gap-4">
+                        <TabsContent value="joined">
+                            <div className="flex flex-col gap-3">
                                 {events.map((event, index) => (
                                     <JoinedEventCard
                                         key={event.id}
@@ -104,7 +104,7 @@ export default function EventsPage() {
                         </TabsContent>
 
                         <TabsContent value="owner">
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 {events.map((event, index) => (
                                     <OwnerEventCard
                                         key={event.id}

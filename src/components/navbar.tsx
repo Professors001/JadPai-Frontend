@@ -95,7 +95,7 @@ const Navbar = () => {
                     }} 
                     className="px-4 py-2 rounded-full"
                 >
-                    ลงชื่อออก
+                    <a href="/login">ลงชื่อออก</a>
                 </Button>
             </div>
         </nav>

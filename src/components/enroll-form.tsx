@@ -22,36 +22,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-// --- Helper function to simulate a file upload ---
-const uploadFile = (file: File): Promise<{ filePath: string }> => {
-
-    // make it keep on frontend side public directory
-
-  console.log(`Uploading file: ${file.name}`);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mockPath = `/uploads/images/${Date.now()}-${file.name}`;
-      console.log(`File uploaded successfully. Path: ${mockPath}`);
-      resolve({ filePath: mockPath });
-    }, 1500);
-  });
-};
 
 // Define constants for file validation
 const MAX_FILE_SIZE = 5000000; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
-// --- FIXED ZOD SCHEMA ---
-// This schema is now "isomorphic" - it works on both server and client.
 const FormSchema = z.object({
   name: z.string().min(1, "กรุณากรอกชื่อ"),
   phone: z.string().min(10, "เบอร์โทรศัพท์ต้องมีอย่างน้อย 10 หลัก"),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
   picture: z
-    .any() // Use z.any() to avoid referencing browser-only `FileList` on the server
-    .refine((files) => files?.length >= 1, "กรุณาเลือกไฟล์.") // Check that files exist
+    .any()
+    .refine((files) => files?.length >= 1, "กรุณาเลือกไฟล์.")
     .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `ไฟล์ต้องมีขนาดไม่เกิน 5MB.`)
     .refine(
       (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
@@ -59,7 +41,11 @@ const FormSchema = z.object({
     ),
 });
 
-export function EnrollForm() {
+interface EnrollFormProps {
+  eventId: string; // The component now requires a numerical event ID
+}
+
+export function EnrollForm({ eventId }: EnrollFormProps) {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -69,25 +55,40 @@ export function EnrollForm() {
     },
   });
 
+  // --- MODIFIED onSubmit FUNCTION ---
   async function onSubmit(data: z.infer<typeof FormSchema>) {
-    const file = data.picture[0];
+    // You must have the user's ID available in your component's state or props.
+    // For this example, let's assume it's stored in a variable.
+    const currentUserId = 1; // <-- Example: This ID must come from somewhere
+
+    const formData = new FormData();
+    formData.append("name", data.name);
+    formData.append("phone", data.phone);
+    formData.append("email", data.email);
+    formData.append("picture", data.picture[0]);
+    
+    // --- CHANGE: Add the userId to the form data ---
+    formData.append("userId", String(currentUserId)); 
+    formData.append("eventId", eventId); // The ID of the event being enrolled in
 
     try {
-      const uploadResult = await uploadFile(file);
-      const imageUrl = uploadResult.filePath;
+        // The API call no longer needs the Authorization header
+        const response = await fetch("http://localhost:6969/enrollments/enroll", {
+            method: "POST",
+            body: formData,
+        });
 
-      const finalFormData = {
-        name: data.name,
-        phone: data.phone,
-        email: data.email,
-        imageUrl: imageUrl,
-      };
+        if (!response.ok) {
+            throw new Error("Network response was not ok");
+        }
 
-      console.log("Form submitted successfully with image path:", finalFormData);
+        const result = await response.json();
+        console.log("Form submitted successfully:", result);
+
     } catch (error) {
-      console.error("File upload failed:", error);
+        console.error("Form submission failed:", error);
     }
-  }
+}
 
   return (
     <Dialog>
@@ -103,6 +104,7 @@ export function EnrollForm() {
               <DialogDescription>กรุณากรอกข้อมูลของคุณเพื่อลงทะเบียน</DialogDescription>
             </DialogHeader>
 
+            {/* --- Form fields remain the same --- */}
             <FormField
               control={form.control}
               name="name"
@@ -116,8 +118,8 @@ export function EnrollForm() {
                 </FormItem>
               )}
             />
-
-            <FormField
+            {/* ... other fields ... */}
+             <FormField
               control={form.control}
               name="phone"
               render={({ field }) => (
@@ -130,7 +132,6 @@ export function EnrollForm() {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="email"
@@ -144,7 +145,6 @@ export function EnrollForm() {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="picture"
@@ -165,7 +165,9 @@ export function EnrollForm() {
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Submit</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Submitting..." : "Submit"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

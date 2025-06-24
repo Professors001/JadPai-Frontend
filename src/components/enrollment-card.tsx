@@ -30,10 +30,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Enrollment } from '@/interfaces/Enrollment';
+import { Event } from '@/interfaces/Event';
 
 interface EnrollmentCardProps {
   enrollment: Enrollment;
-  eventName?: string; // Optional: to show which event
+  event?: Event; // Optional: to show which event
   onEdit?: (enrollmentId: string) => void;
   onDelete?: (enrollmentId: string) => void;
   onStatusChange?: (enrollmentId: string, newStatus: string) => void;
@@ -42,7 +43,7 @@ interface EnrollmentCardProps {
 
 export function EnrollmentCard({ 
   enrollment, 
-  eventName,
+  event,
   onEdit, 
   onDelete, 
   onStatusChange,
@@ -114,9 +115,9 @@ export function EnrollmentCard({
               <User className="h-5 w-5 text-muted-foreground" />
               {enrollment.name}
             </CardTitle>
-            {eventName && (
+            {event?.name && (
               <CardDescription className="mt-1">
-                กิจกรรม: {eventName}
+                กิจกรรม: {event?.name}
               </CardDescription>
             )}
           </div>

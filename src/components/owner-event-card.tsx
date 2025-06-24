@@ -11,13 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
-
-export interface Event {
-  id: string;
-  name: string;
-  description: string;
-  max_cap: number;
-}
+import { EditEventForm } from './edit-event-form';
+import { Event } from '@/interfaces/Event';
 
 interface OwnerEventCardProps {
   event: Event;
@@ -93,9 +88,7 @@ export function OwnerEventCard({
       {/* Footer: The logic is now corrected. It uses a standard <a> tag for navigation. */}
       <CardFooter>
         {isDetailPage ? (
-          <Button className="w-full py-6" onClick={() => onEdit?.(event.id)}>
-            แก้ไขข้อมูลกิจกรรม
-          </Button>
+          <EditEventForm event={event} />
         ) : (
           // Using a standard anchor tag <a> for the link to avoid build errors.
           <a href={`/events/${event.id}`} className="w-full">
