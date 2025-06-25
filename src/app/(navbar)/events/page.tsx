@@ -34,7 +34,7 @@ export default function EventsPage() {
             try {
                 if (user.role === 'admin') {
                     // Admins only need to see the events they own
-                    await fetchOwnerEvents(user.id);
+                    await fetchOwnerEvents();
                 } else {
                     // Regular users need to see events they can join and events they have joined
                     await Promise.all([
@@ -78,7 +78,9 @@ export default function EventsPage() {
 
     async function fetchEnrollment(currentUserId: string) {
         try {
-            const res = await fetch(`http://localhost:6969/enrollments/users/${currentUserId}`); 
+            const res = await fetch(`http://localhost:6969/enrollments/users/${currentUserId}`);
+            console.log("res:", res);
+             
             if (!res.ok) throw new Error('Failed to fetch Enrollment');
             const resJson = await res.json();
             setEnrollments(resJson || []);
@@ -87,7 +89,7 @@ export default function EventsPage() {
         }
     }
 
-    async function fetchOwnerEvents(currentUserId: string) {
+    async function fetchOwnerEvents() {
         try {
             const res = await fetch(`http://localhost:6969/events`); 
             if (!res.ok) throw new Error('Failed to fetch Owner Events');
