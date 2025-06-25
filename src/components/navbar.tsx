@@ -17,8 +17,9 @@ import {
 } from './ui/dropdown-menu';
 import { Badge } from './ui/badge';
 import { User, LogOut, Settings, Moon, Sun } from 'lucide-react';
+import { EditProfileForm } from './edit-user-form';
 
-// 1. Define a type for the user object stored in localStorage
+// Define a type for the user object stored in localStorage
 interface UserProfile {
   id: number;
   name: string;
@@ -29,10 +30,8 @@ interface UserProfile {
 
 const Navbar = () => {
     const { theme, setTheme } = useTheme();
-    // 2. Create state to hold the user data
     const [user, setUser] = useState<UserProfile | null>(null);
 
-    // 3. Use useEffect to read from localStorage and handle auth redirection
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         
@@ -41,29 +40,24 @@ const Navbar = () => {
                 setUser(JSON.parse(storedUser));
             } catch (error) {
                 console.error("Failed to parse user data from localStorage", error);
-                localStorage.removeItem('user'); // Clear corrupted data
+                localStorage.removeItem('user');
             }
         } else {
-            // New logic: If no user is stored, redirect to login
             const publicPaths = ['/login', '/signup'];
             const currentPath = window.location.pathname;
             
-            // Redirect only if the user is not on a public page to avoid redirect loops
             if (!publicPaths.includes(currentPath)) {
                 window.location.href = '/login';
             }
         }
     }, []);
 
-    // 4. Implement the logout handler
     const handleLogout = () => {
         toast.success("ลงชื่อออกสำเร็จ!");
         
-        // Remove user data and token from localStorage
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         
-        // Redirect to login page after a short delay
         setTimeout(() => {
             window.location.href = '/login';
         }, 500);
@@ -77,7 +71,6 @@ const Navbar = () => {
 
     return (
         <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-            {/* Logo Section */}
             <Link href={user ? "/events" : "/login"} className="flex items-center hover:opacity-80 transition-opacity">
                 <span className="text-3xl font-semibold text-foreground">JadPai</span>
             </Link>
@@ -85,7 +78,6 @@ const Navbar = () => {
             <div className="flex items-center space-x-6">
                 {user ? (
                     <>
-                        {/* Activity Badge */}
                         <Link href="/events">
                             <Badge 
                                 variant="outline" 
@@ -95,7 +87,6 @@ const Navbar = () => {
                             </Badge>
                         </Link>
 
-                        {/* User Profile Dropdown */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <div className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
@@ -114,14 +105,9 @@ const Navbar = () => {
                             <DropdownMenuContent className="w-56" align="end">
                                 <DropdownMenuLabel>บัญชีของฉัน</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="cursor-pointer">
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>ข้อมูลส่วนตัว</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="cursor-pointer">
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    <span>การตั้งค่า</span>
-                                </DropdownMenuItem>
+                                
+                                {/* Use the EditProfileForm to wrap the DropdownMenuItem */}
+                                <EditProfileForm />
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                     className="cursor-pointer text-destructive focus:text-destructive"
@@ -134,13 +120,10 @@ const Navbar = () => {
                         </DropdownMenu>
                     </>
                 ) : (
-                    // Show a Login button if no user is found (and redirection hasn't happened yet)
                     <Link href="/login">
                          <Button>เข้าสู่ระบบ</Button>
                     </Link>
                 )}
-
-                {/* Theme Toggle */}
                 <Button
                     variant="ghost"
                     size="icon"
