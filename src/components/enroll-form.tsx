@@ -1,6 +1,10 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
 
 import {
   Form,
@@ -13,7 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -22,6 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { User } from "@/interfaces/User";
 
 // Define constants for file validation
 const MAX_FILE_SIZE = 5000000; // 5MB
@@ -42,24 +46,53 @@ const FormSchema = z.object({
 });
 
 interface EnrollFormProps {
-  eventId: string; // The component now requires a numerical event ID
+  eventId: string;
 }
 
 export function EnrollForm({ eventId }: EnrollFormProps) {
+  // 2. Add state for dialog control and to store the current user
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
+    // Default values will be populated by useEffect later
     defaultValues: {
       name: "",
       phone: "",
       email: "",
+      picture: undefined,
     },
   });
 
-  // --- MODIFIED onSubmit FUNCTION ---
+  // 3. Use useEffect to read user data from localStorage when the component mounts
+  useEffect(() => {
+    const storedUserJson = localStorage.getItem('user');
+    if (storedUserJson) {
+      try {
+        const user: User = JSON.parse(storedUserJson);
+        setCurrentUser(user);
+
+        // 4. Pre-fill the form with the user's data
+        form.reset({
+          name: `${user.name} ${user.surname}`,
+          phone: user.phone,
+          email: user.email,
+        });
+      } catch (e) {
+        console.error("Failed to parse user data from localStorage", e);
+      }
+    }
+  }, [form]); // Rerun if the form instance changes
+
   async function onSubmit(data: z.infer<typeof FormSchema>) {
-    // You must have the user's ID available in your component's state or props.
-    // For this example, let's assume it's stored in a variable.
-    const currentUserId = 10; // <-- Example: This ID must come from somewhere
+    // 5. Ensure we have user data before submitting
+    if (!currentUser) {
+      toast.error("ไม่พบข้อมูลผู้ใช้", { description: "กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง" });
+      return;
+    }
+
+    const toastId = toast.loading("กำลังส่งข้อมูลการสมัคร...");
 
     const formData = new FormData();
     formData.append("name", data.name);
@@ -67,31 +100,38 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
     formData.append("email", data.email);
     formData.append("picture", data.picture[0]);
     
-    // --- CHANGE: Add the userId to the form data ---
-    formData.append("userId", String(currentUserId)); 
-    formData.append("eventId", eventId); // The ID of the event being enrolled in
+    // 6. Use the user ID from the state
+    formData.append("userId", String(currentUser.id)); 
+    formData.append("eventId", eventId);
 
     try {
-        // The API call no longer needs the Authorization header
         const response = await fetch("http://localhost:6969/enrollments/enroll", {
             method: "POST",
             body: formData,
         });
 
         if (!response.ok) {
-            throw new Error("Network response was not ok");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "การสมัครล้มเหลว");
         }
 
-        const result = await response.json();
-        console.log("Form submitted successfully:", result);
+        toast.success("สมัครเข้าร่วมกิจกรรมสำเร็จ!", { id: toastId });
+        setIsOpen(false); // Close dialog on success
+        // Optionally reset the picture field manually if needed
+        form.reset({ ...form.getValues(), picture: undefined });
+
 
     } catch (error) {
         console.error("Form submission failed:", error);
+        toast.error("การสมัครล้มเหลว", {
+            description: error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+            id: toastId,
+        });
     }
-}
+  }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="py-6 w-full">เข้าร่วมกิจกรรม</Button>
       </DialogTrigger>
@@ -101,10 +141,9 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
               <DialogTitle>ลงทะเบียนเข้าร่วม</DialogTitle>
-              <DialogDescription>กรุณากรอกข้อมูลของคุณเพื่อลงทะเบียน</DialogDescription>
+              <DialogDescription>ข้อมูลของคุณจะถูกกรอกโดยอัตโนมัติ</DialogDescription>
             </DialogHeader>
 
-            {/* --- Form fields remain the same --- */}
             <FormField
               control={form.control}
               name="name"
@@ -118,7 +157,6 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
                 </FormItem>
               )}
             />
-            {/* ... other fields ... */}
              <FormField
               control={form.control}
               name="phone"
@@ -150,7 +188,7 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
               name="picture"
               render={() => (
                 <FormItem>
-                  <FormLabel>รูปหลักฐาน</FormLabel>
+                  <FormLabel>รูปหลักฐานการชำระเงิน (ถ้ามี)</FormLabel>
                   <FormControl>
                     <Input type="file" {...form.register("picture")} />
                   </FormControl>
@@ -160,13 +198,11 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
             />
 
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </DialogClose>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                ยกเลิก
+              </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Submitting..." : "Submit"}
+                {form.formState.isSubmitting ? "กำลังส่งข้อมูล..." : "ยืนยันการสมัคร"}
               </Button>
             </DialogFooter>
           </form>

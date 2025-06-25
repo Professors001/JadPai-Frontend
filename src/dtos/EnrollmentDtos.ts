@@ -1,3 +1,5 @@
+import { EventDtos } from "./EventDtos";
+
 export interface EnrollmentWithEvent {
     id : string;
     user_id : string;
@@ -10,5 +12,5 @@ export interface EnrollmentWithEvent {
     enroll_date : Date;
     update_timestamp : Date;
     
-    event : Event
+    event : EventDtos
 }

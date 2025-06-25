@@ -1,13 +1,14 @@
 "use client"
 
+import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
 import {
   Form,
   FormControl,
@@ -30,8 +31,8 @@ const FormSchema = z.object({
   email: z.string().email({
     message: "รูปแบบอีเมลไม่ถูกต้อง",
   }),
-  password: z.string().min(1, {
-    message: "ความยาวต้องมากกว่า 1 ตัวอักษร",
+  password: z.string().min(6, { // A password should generally be longer
+    message: "รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร",
   })
 })
 
@@ -50,8 +51,45 @@ export function SignUpForm({
     },
   })
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log(data)
+  // Implement the async onSubmit function to handle the API call
+  async function onSubmit(data: z.infer<typeof FormSchema>) {
+    const toastId = toast.loading("กำลังสมัครสมาชิก...");
+
+    try {
+      const response = await fetch('http://localhost:6969/users', { // Replace with your actual signup endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      const result = await response.json(); // Get the JSON response from the server
+
+      if (!response.ok) {
+        // If the server provides a specific error message, use it. Otherwise, use a generic one.
+        throw new Error(result.message || 'Something went wrong. Please try again.');
+      }
+
+      // On success, show a success toast and redirect
+      toast.success("สมัครสมาชิกเรียบร้อย!", {
+        description: "กำลังนำคุณไปยังหน้าเข้าสู่ระบบ...",
+        id: toastId,
+      });
+
+      // Redirect to the login page after a short delay
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+
+    } catch (error) {
+      console.error("Failed to sign up:", error);
+      toast.error("ไม่สามารถสมัครสมาชิกได้", {
+        // Display the error message from the server if available
+        description: error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+        id: toastId,
+      });
+    }
   }
 
   return (
@@ -112,7 +150,6 @@ export function SignUpForm({
                         inputMode="numeric"
                         {...field}
                         onChange={(e) => {
-                          // Remove any non-numeric characters
                           const numericValue = e.target.value.replace(/[^0-9]/g, '');
                           field.onChange(numericValue);
                         }}
@@ -151,8 +188,8 @@ export function SignUpForm({
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                สมัครสมาชิก
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "กำลังสมัครสมาชิก..." : "สมัครสมาชิก"}
               </Button>
             </div>
           </div>

@@ -9,22 +9,57 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, MapPin, Clock } from 'lucide-react';
-import { Event } from '@/interfaces/Event';
+import { Users } from 'lucide-react';
+import { EventDtos } from '@/dtos/EventDtos';
+import { EnrollmentWithEvent } from '@/dtos/EnrollmentDtos';
 
-interface EventCardProps {
-  event: Event;
-  currentParticipants?: number; // Optional: to show current vs max capacity
-  onJoin?: (eventId: string) => void;
-  onViewDetails?: (eventId: string) => void;
+// The props now expect a single `enrollment` object
+interface JoinedEventCardProps {
+  enrollment: EnrollmentWithEvent;
 }
 
 export function JoinedEventCard({ 
-  event, 
-  currentParticipants = 0
-}: EventCardProps) {
+  enrollment
+}: JoinedEventCardProps) {
+  // Destructure for easier access
+  const { event, status } = enrollment;
+  const currentParticipants = event.confirmed_count;
+
   const isFullCapacity = currentParticipants >= event.max_cap;
   const capacityPercentage = (currentParticipants / event.max_cap) * 100;
+
+  // Helper function to get the display text for a status
+  const getStatusLabel = (status: typeof enrollment.status) => {
+    switch (status) {
+      case 'confirmed':
+        return 'อนุมัติ';
+      case 'rejected':
+        return 'ปฏิเสธ';
+      case 'pending':
+        return 'รอดำเนินการ';
+      case 'cancelled':
+        return 'ยกเลิก';
+      default:
+        return status;
+    }
+  };
+
+  // Helper function to get the tailwind color class for a status
+  const getStatusColor = (status: typeof enrollment.status) => {
+    switch (status) {
+      case 'confirmed':
+        return 'text-green-500';
+      case 'rejected':
+        return 'text-red-500';
+      case 'pending':
+        return 'text-yellow-500';
+      case 'cancelled':
+        return 'text-gray-500';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
+
 
   return (
     <Card className="w-full max-w-5xl hover:shadow-lg transition-shadow duration-200">
@@ -78,21 +113,25 @@ export function JoinedEventCard({
         </div>
       </CardContent>
 
-      <CardFooter className="flex gap-2">
-        <div className='flex flex-rows items-center justify-center w-full gap-2'>
+      <CardFooter className="flex items-center justify-between gap-2">
+        <div className='flex flex-rows items-center justify-center gap-2'>
             <p className='text-muted-foreground text-sm'>สถานะการจอง:</p>
-            <p className='text-yellow-500 font-bold'> กำลังพิจารณา</p>
+            <p className={`font-bold ${getStatusColor(status)}`}>
+              {getStatusLabel(status)}
+            </p>
         </div>
-        <Button 
-          className="flex-1 py-6"
-          variant="destructive" 
-          disabled={isFullCapacity}
-          onClick={() => {
-            console.log('Cancelling Enrollments:', event.id);
-          }}
-        >
-          ยกเลิก
-        </Button>
+        
+        {/* Show cancel button only if the user can take action */}
+        {(status === 'pending' || status === 'confirmed') && (
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                console.log('Cancelling Enrollment for event:', event.id);
+              }}
+            >
+              ยกเลิก
+            </Button>
+        )}
       </CardFooter>
     </Card>
   );

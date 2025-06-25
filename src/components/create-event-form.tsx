@@ -1,6 +1,8 @@
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
 
 import {
   Form,
@@ -24,47 +26,81 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "./ui/textarea";
 
+// The Zod schema remains the same.
 const FormSchema = z.object({
   name: z.string().min(1, {
     message: "ความยาวต้องมากกว่า 1 ตัวอักษร",
   }),
-  max_cap: z.coerce.number().min(2, { // Use z.coerce.number() to automatically convert string from input to number
-      message: "กิจกรรมต้องมีผู้เข้าร่วมมากกว่า 2",
+  max_cap: z.coerce.number().min(2, {
+    message: "กิจกรรมต้องมีผู้เข้าร่วมอย่างน้อย 2 คน",
   }),
-  description: z.string().optional(), // Use optional() for fields that can be empty
+  description: z.string().optional(),
 });
 
 export function CreateEventForm() {
+  // 1. Add state to control the Dialog's open/closed status
+  const [isOpen, setIsOpen] = useState(false);
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
-      max_cap: 2, // It's better to set a valid default
+      max_cap: 2,
       description: "",
     },
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log("Form submitted successfully:", data);
-    // Here you would typically close the dialog programmatically after a successful submission
+  // 2. Implement the async onSubmit function to handle the API call
+  async function onSubmit(data: z.infer<typeof FormSchema>) {
+    const toastId = toast.loading("กำลังสร้างกิจกรรม...");
+
+    try {
+      const response = await fetch('http://localhost:6969/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        // If the server responds with an error, handle it here
+        throw new Error('Something went wrong. Please try again.');
+      }
+
+      // If the request is successful:
+      toast.success("สร้างกิจกรรมเรียบร้อยแล้ว!", { id: toastId });
+      
+      form.reset(); // Reset form fields to default values
+      setIsOpen(false); // Programmatically close the dialog
+
+      // Optional: You might want to trigger a refresh of your events list here
+      // For example: revalidatePath('/events'); or queryClient.invalidateQueries(...)
+
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      toast.error("ไม่สามารถสร้างกิจกรรมได้", {
+        description: "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์",
+        id: toastId,
+      });
+    }
   }
 
   return (
-    <Dialog>
+    // 3. Control the Dialog component with the new state
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="py-10 w-full">+ สร้างกิจกรรม</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
-          {/* The form tag now wraps the content and the submit button */}
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
               <DialogTitle>สร้างกิจกรรมใหม่</DialogTitle>
               <DialogDescription>กรุณากรอกข้อมูลของกิจกรรมใหม่</DialogDescription>
             </DialogHeader>
 
-            {/* No need for an extra div, you can apply gap/space directly to the form */}
             <FormField
               control={form.control}
               name="name"
@@ -86,12 +122,12 @@ export function CreateEventForm() {
                 <FormItem>
                   <FormLabel>จำนวนผู้เข้าร่วมสูงสุด</FormLabel>
                   <FormControl>
-                    {/* The value needs to be handled carefully with type="number" */}
                     <Input
                       type="number"
                       placeholder="กรอกจำนวนผู้เข้าร่วม"
                       {...field}
-                      onChange={event => field.onChange(event.target.valueAsNumber)}
+                      // Ensure value is a number for react-hook-form
+                      onChange={event => field.onChange(+event.target.value)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -118,11 +154,14 @@ export function CreateEventForm() {
             />
 
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              {/* This button is now correctly inside the form */}
-              <Button type="submit">Save changes</Button>
+              {/* This button just closes the dialog without submitting */}
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                ยกเลิก
+              </Button>
+              {/* The submit button is disabled automatically while the form is submitting */}
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

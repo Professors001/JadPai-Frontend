@@ -80,7 +80,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <OwnerEventCard
                     key={event.id}
                     event={event}
-                    currentParticipants={event.confirmed_count} // Placeholder data
+                    currentParticipants={event.confirmed_count}
                     isDetailPage={true}
                     onEdit={(id) => console.log(`Edit button clicked for event: ${id}`)}
                 />
