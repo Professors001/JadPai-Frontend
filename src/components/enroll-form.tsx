@@ -59,7 +59,7 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     // You must have the user's ID available in your component's state or props.
     // For this example, let's assume it's stored in a variable.
-    const currentUserId = 1; // <-- Example: This ID must come from somewhere
+    const currentUserId = 10; // <-- Example: This ID must come from somewhere
 
     const formData = new FormData();
     formData.append("name", data.name);

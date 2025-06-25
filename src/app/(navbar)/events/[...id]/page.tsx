@@ -1,19 +1,18 @@
 'use client'
 
 import React, { use, useEffect, useState } from 'react';
-import { Event } from '@/interfaces/Event';
 import { OwnerEventCard } from '@/components/owner-event-card';
 import { Enrollment } from '@/interfaces/Enrollment';
-import { EnrollmentCard } from '@/components/enrollment-card';
+import EnrollmentCard from '@/components/enrollment-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EventDtos } from '@/dtos/EventDtos';
 
 
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }>  }) {
 
-    const [event, setEvent] = useState<Event | null>(null);
+    const [event, setEvent] = useState<EventDtos | null>(null);
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-    const [enrollments2, setEnrollments2] = useState<Enrollment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -26,8 +25,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             try {
                 const res = await fetch(`http://localhost:6969/events/${eventId}`);
                 if (!res.ok) throw new Error(`Failed to fetch event. Status: ${res.status}`);
-                const data: Event = await res.json();
+                const data: EventDtos = await res.json();
                 setEvent(data);
+                // console.log("Fetched event:", data);
+                
             } catch (err: any) {
                 console.error("Error fetching event:", err);
                 setError(err.message || "An unknown error occurred");
@@ -40,13 +41,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`http://localhost:6969/enrollments`);
+                const res = await fetch(`http://localhost:6969/enrollments/events/${eventId}`);
                 if (!res.ok) {
                     throw new Error('Failed to fetch Enrollment');
                 }
                 
                 const resJson = await res.json();
-                console.log("Fetched Enrollment:", resJson);
+                // console.log("Fetched Enrollment:", resJson);
                 setEnrollments(resJson || []);
                 console.log("Fetched Enrollment Success");
             } catch (err: any) {
@@ -79,7 +80,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <OwnerEventCard
                     key={event.id}
                     event={event}
-                    currentParticipants={enrollments.length} // Placeholder data
+                    currentParticipants={event.confirmed_count} // Placeholder data
                     isDetailPage={true}
                     onEdit={(id) => console.log(`Edit button clicked for event: ${id}`)}
                 />
@@ -89,9 +90,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <Tabs defaultValue="all">
                         <TabsList>
                             <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
-                            <TabsTrigger value="waitlisted">ยังไม่อนุมัติ</TabsTrigger>
-                            <TabsTrigger value="appoved">อนุมัติ</TabsTrigger>
-                            <TabsTrigger value="not_appoved">ไม่อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="pending">ยังไม่อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="confirmed">อนุมัติ</TabsTrigger>
+                            <TabsTrigger value="rejected">ไม่อนุมัติ</TabsTrigger>
                             <TabsTrigger value="cancelled">ยกเลิก</TabsTrigger>
                         </TabsList>
 
@@ -99,42 +100,64 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                             <div className="flex flex-col gap-3">
                                 {enrollments.map((enrollment, index) => (
                                     <EnrollmentCard
-                                        key={enrollment.id}
-                                        enrollment={enrollment}
-                                        onEdit={(id) => console.log('Edit:', id)}
-                                        onDelete={(id) => console.log('Delete:', id)}
-                                        onStatusChange={(id, status) => console.log('Status change:', id, status)}
+                                        key={index} 
+                                        enrollData={enrollment}
                                     />
                                 ))}
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="waitlisted">
-                            {enrollments2.length === 0 ? (
-                                <p>ยังไม่มีผู้เข้าร่วม</p>
-                            ) : 
-                            enrollments2.map((enrollment, index) => (
-                                <EnrollmentCard
-                                    key={enrollment.id}
-                                    enrollment={enrollment}
-                                    onEdit={(id) => console.log('Edit:', id)}
-                                    onDelete={(id) => console.log('Delete:', id)}
-                                    onStatusChange={(id, status) => console.log('Status change:', id, status)}
-                                />
-                            ))}
+                        <TabsContent value="pending">
+                            <div className="flex flex-col gap-3">
+                                {enrollments
+                                    .filter(enrollment => enrollment.status === 'pending') // First, filter the array
+                                    .map((enrollment, index) => ( // Then, map over the filtered results
+                                        <EnrollmentCard
+                                            key={index} 
+                                            enrollData={enrollment}
+                                        />
+                                    ))}
+                            </div>
                             
                         </TabsContent>
 
-                        <TabsContent value="appoved">
-                            
+                        <TabsContent value="confirmed">
+                            <div className="flex flex-col gap-3">
+                                {enrollments
+                                    .filter(enrollment => enrollment.status === 'confirmed') // First, filter the array
+                                    .map((enrollment, index) => ( // Then, map over the filtered results
+                                        <EnrollmentCard
+                                            key={index} 
+                                            enrollData={enrollment}
+                                        />
+                                    ))}
+                            </div>
                         </TabsContent>
 
-                        <TabsContent value="not_appoved">
-                            
+                        <TabsContent value="rejected">
+                            <div className="flex flex-col gap-3">
+                                {enrollments
+                                    .filter(enrollment => enrollment.status === 'rejected') // First, filter the array
+                                    .map((enrollment, index) => ( // Then, map over the filtered results
+                                        <EnrollmentCard
+                                            key={index} 
+                                            enrollData={enrollment}
+                                        />
+                                    ))}
+                            </div>
                         </TabsContent>
 
                         <TabsContent value="cancelled">
-                            
+                            <div className="flex flex-col gap-3">
+                                {enrollments
+                                    .filter(enrollment => enrollment.status === 'cancelled') // First, filter the array
+                                    .map((enrollment, index) => ( // Then, map over the filtered results
+                                        <EnrollmentCard
+                                            key={index} 
+                                            enrollData={enrollment}
+                                        />
+                                    ))}
+                            </div>
                         </TabsContent>
                     </Tabs>
             </div>

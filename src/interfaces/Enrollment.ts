@@ -6,7 +6,7 @@ export interface Enrollment {
     email : string;
     phone : string;
     status : string;
-    img_path : string;
+    evidence_img_path : string;
     enroll_date : Date;
     update_timestamp : Date;
 }
