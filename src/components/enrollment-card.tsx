@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { CalendarDays, Mail, Phone, FileImage, User, Clock, Save, Eye } from 'lucide-react';
 import { Enrollment } from '@/interfaces/Enrollment';
+import { toast } from 'sonner';
 
 interface EnrollCardProps {
   enrollData: Enrollment;
@@ -56,14 +57,43 @@ const EnrollmentCard: React.FC<EnrollCardProps> = ({
     }
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    if (!canChangeStatus) return;
+  const handleStatusChange = async (newStatus: string) => {
+  // 1. Guard clause: Do nothing if the status cannot be changed.
+  if (!canChangeStatus) return;
+
+  try {
+    // 2. Make the API call to your endpoint.
+    // We use the enrollData.id to build the correct URL.
+    // console.log("api call", `http://localhost:6969/enrollments/${enrollData.id}`);
+    const response = await fetch(`http://localhost:6969/enrollments/${enrollData.id}`, {
+      method: 'PUT', // or 'POST'/'PUT' depending on your API design
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // 3. Send ONLY the status in the request body.
+      body: JSON.stringify({ status: newStatus }),
+    });
     
+    // 4. Check if the request was successful.
+    if (!response.ok) {
+      // If the server returns an error (like 404, 500), throw an error to be caught by the catch block.
+      throw new Error('Failed to update status on the server.');
+    }
+    
+    // 5. On success, update the local component state and call the parent callback.
     setCurrentStatus(newStatus as 'pending' | 'confirmed' | 'rejected' | 'cancelled');
+    toast.success('เปลี่ยนสถานะเรียบร้อย')
+    
     if (onStatusChange) {
       onStatusChange(enrollData.id, newStatus);
     }
-  };
+
+  } catch (error) {
+    // 6. Handle any network errors or errors thrown from the response check.
+    console.error('Error updating enrollment status:', error);
+    // You could also show a user-facing error message here (e.g., a toast notification).
+  }
+};
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('th-TH', {
@@ -261,22 +291,8 @@ const EnrollmentCard: React.FC<EnrollCardProps> = ({
                     ปฏิเสธ
                   </div>
                 </SelectItem>
-                <SelectItem value="cancelled" className="text-gray-800 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                    ยกเลิก
-                  </div>
-                </SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              onClick={() => handleStatusChange(currentStatus)}
-              className="flex items-center gap-2"
-              disabled={!canChangeStatus}
-            >
-              <Save className="h-4 w-4" />
-              บันทึก
-            </Button>
           </div>
         </div>
       </CardContent>
