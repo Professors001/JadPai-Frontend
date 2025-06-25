@@ -76,6 +76,9 @@ export function CreateEventForm() {
 
       // Optional: You might want to trigger a refresh of your events list here
       // For example: revalidatePath('/events'); or queryClient.invalidateQueries(...)
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
 
     } catch (error) {
       console.error("Failed to create event:", error);

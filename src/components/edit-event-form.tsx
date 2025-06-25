@@ -1,7 +1,10 @@
+'use client'
+
 import React, { useEffect, useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,27 +13,28 @@ import { Users } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Assuming this path is correct
-import { Event } from '@/interfaces/Event';
+import { Textarea } from "@/components/ui/textarea"; 
+import { EventDtos } from '@/dtos/EventDtos';
 
 // --- Zod Schema for Form Validation ---
 const FormSchema = z.object({
   name: z.string().min(1, {
     message: "ความยาวต้องมากกว่า 1 ตัวอักษร",
   }),
-  max_cap: z.coerce.number().min(2, { // Use z.coerce.number() to auto-convert string
+  max_cap: z.coerce.number().min(2, {
       message: "กิจกรรมต้องมีผู้เข้าร่วมมากกว่า 2",
   }),
-  description: z.string().optional(), // Use optional() for fields that can be empty
+  description: z.string().optional(),
 });
 
 
 // --- Edit Event Form Component ---
-// Now accepts the event object to pre-fill the form
-export function EditEventForm({ event }: { event: Event }) {
+export function EditEventForm({ event }: { event: EventDtos }) {
+  // State to control the dialog's open/closed status
+  const [isOpen, setIsOpen] = useState(false);
+  
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    // Use the passed event data as default values
     defaultValues: {
       name: event.name || "",
       max_cap: event.max_cap || 2,
@@ -38,14 +42,54 @@ export function EditEventForm({ event }: { event: Event }) {
     },
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log("Form submitted successfully:", data);
-    // In a real app, you would make an API call here to update the event
-    // and then likely close the dialog.
+  // --- Implemented onSubmit function with API call ---
+  async function onSubmit(data: z.infer<typeof FormSchema>) {
+    const toastId = toast.loading("กำลังอัปเดตกิจกรรม...");
+
+    // To be efficient, find what data actually changed and send only that
+    const changedData: Partial<z.infer<typeof FormSchema>> = {};
+    if (data.name !== event.name) changedData.name = data.name;
+    if (data.max_cap !== event.max_cap) changedData.max_cap = data.max_cap;
+    if (data.description !== event.description) changedData.description = data.description;
+
+    // If no data has changed, inform the user and close the dialog
+    if (Object.keys(changedData).length === 0) {
+        toast.info("ไม่มีข้อมูลที่เปลี่ยนแปลง", { id: toastId });
+        setIsOpen(false);
+        return;
+    }
+
+    try {
+        const response = await fetch(`http://localhost:6969/events/${event.id}`, {
+            method: 'PUT', // PATCH is best for partial updates
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(changedData),
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.message || "Failed to update event.");
+        }
+
+        toast.success("อัปเดตกิจกรรมเรียบร้อยแล้ว!", { id: toastId });
+        setIsOpen(false);
+
+        // Reload the page to see the changes. A more advanced app might use state management.
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error("Failed to update event:", error);
+        toast.error("การอัปเดตล้มเหลว", {
+            description: error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+            id: toastId,
+        });
+    }
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="py-6 w-full">แก้ไขข้อมูลกิจกรรม</Button>
       </DialogTrigger>
@@ -74,7 +118,12 @@ export function EditEventForm({ event }: { event: Event }) {
                 <FormItem>
                   <FormLabel>จำนวนผู้เข้าร่วมสูงสุด</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="กรอกจำนวนผู้เข้าร่วม" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="กรอกจำนวนผู้เข้าร่วม" 
+                      {...field}
+                      onChange={event => field.onChange(+event.target.value)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -94,8 +143,10 @@ export function EditEventForm({ event }: { event: Event }) {
               )}
             />
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">ยกเลิก</Button></DialogClose>
-              <Button type="submit">บันทึกการเปลี่ยนแปลง</Button>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>ยกเลิก</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
@@ -105,9 +156,8 @@ export function EditEventForm({ event }: { event: Event }) {
 }
 
 // --- Re-usable OwnerEventCard Component ---
-// The onEdit prop is no longer needed as the EditEventForm is used directly.
 interface OwnerEventCardProps {
-  event: Event;
+  event: EventDtos;
   currentParticipants?: number;
   isDetailPage?: boolean;
 }
@@ -154,7 +204,7 @@ function OwnerEventCard({
 
 // --- Main Page Component ---
 export default function EventDetailPage({ params }: { params: { id: string } }) {
-    const [event, setEvent] = useState<Event | null>(null);
+    const [event, setEvent] = useState<EventDtos | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -165,7 +215,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             try {
                 const res = await fetch(`http://localhost:6969/events/${params.id}`);
                 if (!res.ok) throw new Error(`Failed to fetch event. Status: ${res.status}`);
-                const data: Event = await res.json();
+                const data: EventDtos = await res.json();
                 setEvent(data);
             } catch (err: any) {
                 console.error("Error fetching event:", err);
@@ -193,7 +243,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                 <OwnerEventCard
                     key={event.id}
                     event={event}
-                    currentParticipants={25} // Placeholder data
+                    currentParticipants={event.confirmed_count} // Using real data
                     isDetailPage={true}
                 />
             </div>

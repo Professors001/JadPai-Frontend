@@ -120,6 +120,10 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
         // Optionally reset the picture field manually if needed
         form.reset({ ...form.getValues(), picture: undefined });
 
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+
 
     } catch (error) {
         console.error("Form submission failed:", error);

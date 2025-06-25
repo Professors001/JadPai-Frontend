@@ -85,6 +85,9 @@ export function JoinedEventCard({
         }
 
         toast.success("ยกเลิกการลงทะเบียนเรียบร้อยแล้ว", { id: toastId });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
 
     } catch (error) {
         console.error("Error cancelling enrollment:", error);

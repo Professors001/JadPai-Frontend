@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import { EditEventForm } from './edit-event-form';
-import { Event } from '@/interfaces/Event';
+import { EventDtos } from '@/dtos/EventDtos';
 
 interface OwnerEventCardProps {
-  event: Event;
+  event: EventDtos;
   currentParticipants?: number;
   isDetailPage?: boolean; // If true, the card is being used on a detail page.
   onEdit?: (eventId: string) => void;
@@ -25,7 +25,6 @@ export function OwnerEventCard({
   event, 
   currentParticipants = 0, 
   isDetailPage = false, // Default to false (list view behavior)
-  onEdit,
 }: OwnerEventCardProps) {
   const isFullCapacity = currentParticipants >= event.max_cap;
   // Prevent division by zero if max_cap is 0

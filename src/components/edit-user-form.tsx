@@ -115,7 +115,9 @@ export function EditProfileForm() {
       toast.success("Profile updated successfully!", { id: toastId });
       setIsOpen(false); // Close the dialog
       // Optionally, refresh the page to reflect changes everywhere
-      // window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
 
     } catch (error) {
       console.error("Failed to update profile:", error);
