@@ -58,41 +58,41 @@ const EnrollmentCard: React.FC<EnrollCardProps> = ({
   };
 
   const handleStatusChange = async (newStatus: string) => {
-  // 1. Guard clause: Do nothing if the status cannot be changed.
-  if (!canChangeStatus) return;
+    if (!canChangeStatus) return;
 
-  try {
-    // 2. Make the API call to your endpoint.
-    // We use the enrollData.id to build the correct URL.
-    // console.log("api call", `http://localhost:6969/enrollments/${enrollData.id}`);
-    const response = await fetch(`http://localhost:6969/enrollments/${enrollData.id}`, {
-      method: 'PUT', // or 'POST'/'PUT' depending on your API design
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // 3. Send ONLY the status in the request body.
-      body: JSON.stringify({ status: newStatus }),
-    });
-    
-    // 4. Check if the request was successful.
-    if (!response.ok) {
-      // If the server returns an error (like 404, 500), throw an error to be caught by the catch block.
-      throw new Error('Failed to update status on the server.');
-    }
-    
-    // 5. On success, update the local component state and call the parent callback.
-    setCurrentStatus(newStatus as 'pending' | 'confirmed' | 'rejected' | 'cancelled');
-    toast.success('เปลี่ยนสถานะเรียบร้อย')
-    
-    if (onStatusChange) {
-      onStatusChange(enrollData.id, newStatus);
-    }
+    // The logic to get the token and check for its existence has been removed.
 
-  } catch (error) {
-    // 6. Handle any network errors or errors thrown from the response check.
-    console.error('Error updating enrollment status:', error);
-    // You could also show a user-facing error message here (e.g., a toast notification).
-  }
+    try {
+        const response = await fetch(`http://localhost:6969/enrollments/${enrollData.id}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ newStatus: newStatus }),
+        });
+        
+        console.log(response);
+        
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update status on the server.');
+        }
+        
+        const result = await response.json();
+        console.log(result.message);
+
+        setCurrentStatus(newStatus as 'pending' | 'confirmed' | 'rejected' | 'cancelled');
+        toast.success('เปลี่ยนสถานะเรียบร้อย');
+        
+        if (onStatusChange) {
+            onStatusChange(enrollData.id, newStatus);
+        }
+
+    } catch (error) {
+        console.error('Error updating enrollment status:', error);
+        toast.error('Update Failed', { description: (error as Error).message });
+    }
 };
 
   const formatDate = (dateString: string) => {
