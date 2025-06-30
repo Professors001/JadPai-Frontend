@@ -4,7 +4,8 @@ export interface User {
     surname : string;
     email : string;
     phone : string;
-    password_hash : string;
+    password_hash? : string;
     role : string;
+    google_id? : string;
     created_at : Date;
 }
