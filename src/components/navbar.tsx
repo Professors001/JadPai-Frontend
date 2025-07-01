@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { jwtDecode } from 'jwt-decode';
 
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -16,48 +17,75 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Badge } from './ui/badge';
-import { User, LogOut, Settings, Moon, Sun } from 'lucide-react';
+import { User, LogOut, Settings, Moon, Sun, Timer } from 'lucide-react'; // Added Timer icon
 import { EditProfileForm } from './edit-user-form';
 
-// Define a type for the user object stored in localStorage
-interface UserProfile {
-  id: number;
-  name: string;
-  surname: string;
-  email: string;
-  role: string;
-}
 
 const Navbar = () => {
     const { theme, setTheme } = useTheme();
-    const [user, setUser] = useState<UserProfile | null>(null);
+    const [user, setUser] = useState<UserLoginData | null>(null);
+    const [timeLeft, setTimeLeft] = useState(''); // ✨ 1. State for the countdown timer
 
+    // This effect handles setting the user on initial load
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        
-        if (storedUser) {
+        const token = sessionStorage.getItem('token');
+        if (token) {
             try {
-                setUser(JSON.parse(storedUser));
+                const decodedUser: UserLoginData = jwtDecode(token);
+                if (decodedUser.exp * 1000 > Date.now()) {
+                    setUser(decodedUser);
+                } else {
+                    sessionStorage.removeItem('token');
+                }
             } catch (error) {
-                console.error("Failed to parse user data from localStorage", error);
-                localStorage.removeItem('user');
+                console.error("Failed to decode token", error);
+                sessionStorage.removeItem('token');
             }
         } else {
-            const publicPaths = ['/login', '/signup'];
-            const currentPath = window.location.pathname;
-            
-            if (!publicPaths.includes(currentPath)) {
-                window.location.href = '/login';
-            }
+            toast.error("ไม่พบข้อมูลผู้ใช้", {
+            description: "กรุณาลองใหม่อีกครั้งหรือกลับไปที่หน้าเข้าสู่ระบบ",
+            action: {
+                label: "ไปที่หน้าเข้าสู่ระบบ",
+                onClick: () => {
+                    window.location.href = "/login";
+                },
+            },
+            duration: Infinity,
+            });
         }
     }, []);
 
+    // ✨ 2. This effect manages the countdown timer
+    useEffect(() => {
+        if (!user) {
+            setTimeLeft('');
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            const remainingSeconds = Math.floor(user.exp - Date.now() / 1000);
+
+            if (remainingSeconds <= 0) {
+                setTimeLeft('Expired');
+                clearInterval(intervalId);
+                // Optional: Automatically log out when the session expires
+                // handleLogout(); 
+            } else {
+                const minutes = Math.floor(remainingSeconds / 60);
+                const seconds = remainingSeconds % 60;
+                setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }
+        }, 1000);
+
+        // Cleanup function to clear the interval
+        return () => clearInterval(intervalId);
+
+    }, [user]); // Reruns when the user logs in or out
+
     const handleLogout = () => {
         toast.success("ลงชื่อออกสำเร็จ!");
-        
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        
+        sessionStorage.removeItem('token');
+        setUser(null); // Clear user state immediately
         setTimeout(() => {
             window.location.href = '/login';
         }, 500);
@@ -78,15 +106,7 @@ const Navbar = () => {
             <div className="flex items-center space-x-6">
                 {user ? (
                     <>
-                        <Link href="/events">
-                            <Badge 
-                                variant="outline" 
-                                className="cursor-pointer px-4 py-2 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-                            >
-                                รายการกิจกรรม
-                            </Badge>
-                        </Link>
-
+                        {/* ... (Other links) */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <div className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
@@ -98,15 +118,24 @@ const Navbar = () => {
                                     </Avatar>
                                     <div className="hidden md:flex flex-col text-sm text-left">
                                         <p className="font-medium text-foreground">{`${user.name} ${user.surname}`}</p>
-                                        <p className="text-muted-foreground text-xs">{user.role}</p>
+                                        <div className='flex gap-3'>
+                                            {/* <p className="text-muted-foreground text-xs">{user.role.toUpperCase()}</p> */}
+                                            {/* ✨ 3. Display the live timer */}
+                                            {timeLeft && (
+                                                <p className="text-muted-foreground text-xs flex items-center gap-1">
+                                                    เวลาใช้งานคงเหลือ
+                                                    <Timer className="h-3 w-3" />
+                                                    {timeLeft}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end">
+                                {/* ... (Dropdown menu items) */}
                                 <DropdownMenuLabel>บัญชีของฉัน</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                
-                                {/* Use the EditProfileForm to wrap the DropdownMenuItem */}
                                 <EditProfileForm />
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 

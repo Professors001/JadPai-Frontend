@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/tabs"
 
 import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode"; // ✨ 1. Import jwt-decode
 import { CreateEventForm } from "@/components/create-event-form";
 import { EnrollmentWithEvent } from "@/dtos/EnrollmentDtos";
 import { EventDtos } from "@/dtos/EventDtos";
-import { User } from "@/interfaces/User"
+
 
 export default function EventsPage() {
     const [events, setEvents] = useState<EventDtos[]>([]);
@@ -22,24 +23,22 @@ export default function EventsPage() {
     const [ownerEvents, setOwnerEvents] = useState<EventDtos[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // State to hold the user ID and role
     const [userId, setUserId] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
 
+    // ✨ 2. This useEffect is modified to read from sessionStorage and decode the JWT
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
+        const token = sessionStorage.getItem('token');
 
-        async function fetchRelevantDataForUser(user: User) {
+        async function fetchRelevantDataForUser(user: UserLoginData) {
             setIsLoading(true);
             try {
                 if (user.role === 'admin') {
-                    // Admins only need to see the events they own
                     await fetchOwnerEvents();
                 } else {
-                    // Regular users need to see events they can join and events they have joined
                     await Promise.all([
-                        fetchEvents(user.id),
-                        fetchEnrollment(user.id),
+                        fetchEvents(String(user.id)), // Convert user.id to string for the fetch call
+                        fetchEnrollment(String(user.id)),
                     ]);
                 }
             } catch (error) {
@@ -49,19 +48,26 @@ export default function EventsPage() {
             }
         }
 
-        if (storedUser) {
+        if (token) {
             try {
-                const userData: User = JSON.parse(storedUser);
-                setUserId(userData.id);
-                setUserRole(userData.role); // Set the user's role
+                const userData: UserLoginData = jwtDecode(token);
+                
+                // Set the component's state based on the decoded token
+                setUserId(String(userData.id));
+                setUserRole(userData.role);
+                
+                // Fetch data relevant to the logged-in user
                 fetchRelevantDataForUser(userData);
+
             } catch (error) {
-                console.error("Failed to parse user data", error);
+                console.error("Failed to decode token:", error);
                 setIsLoading(false);
             }
         } else {
-            console.log("No user data found in localStorage.");
+            console.log("No token found in sessionStorage. User is not logged in.");
             setIsLoading(false);
+            // Optional: Redirect to login if no token is found
+            // window.location.href = '/login';
         }
     }, []);
 
@@ -79,8 +85,6 @@ export default function EventsPage() {
     async function fetchEnrollment(currentUserId: string) {
         try {
             const res = await fetch(`http://localhost:6969/enrollments/users/${currentUserId}`);
-            console.log("res:", res);
-             
             if (!res.ok) throw new Error('Failed to fetch Enrollment');
             const resJson = await res.json();
             setEnrollments(resJson || []);
@@ -111,16 +115,15 @@ export default function EventsPage() {
             </div>
         );
     }
-
+    
+    // The rest of your component's JSX remains the same
     return (
         <div className="flex items-center justify-center pt-16">
             <div className="w-full max-w-5xl">
                 <div className="w-full flex flex-col gap-4">
                     
-                    {/* Admins can create events */}
                     {userRole === 'admin' && <CreateEventForm />}
 
-                    {/* Conditionally render tabs based on user role */}
                     <Tabs defaultValue={userRole === 'admin' ? 'owner' : 'all'}>
                         <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-1' : 'grid-cols-2'}`}>
                             {userRole !== 'admin' && (
@@ -134,7 +137,6 @@ export default function EventsPage() {
                             )}
                         </TabsList>
 
-                        {/* Content for regular users */}
                         {userRole !== 'admin' && (
                             <>
                                 <TabsContent value="all">
@@ -171,7 +173,6 @@ export default function EventsPage() {
                             </>
                         )}
 
-                        {/* Content for admins */}
                         {userRole === 'admin' && (
                             <TabsContent value="owner">
                                 <div className="flex flex-col gap-3">

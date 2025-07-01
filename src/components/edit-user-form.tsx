@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { toast } from "sonner";
+import { jwtDecode } from "jwt-decode"; // ✨ 1. Import jwt-decode
+
 import {
   Form,
   FormControl,
@@ -24,21 +26,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { User as UserIcon } from "lucide-react"; // Assuming you have a User interface
-import { User } from "@/interfaces/User";
+import { DropdownMenuItem } from "./ui/dropdown-menu"; // For better UI integration
+import { User as UserIcon } from "lucide-react";
 
-// Define a Zod schema for the edit form.
-// All fields are optional except the ones you want to be mandatory for editing.
+
 const EditFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
   surname: z.string().min(1, "Surname is required."),
   phone: z.string().min(10, "Phone number must be at least 10 digits."),
-  password: z.string().optional(), // Password is not required
+  password: z.string().optional(),
 });
 
 export function EditProfileForm() {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserLoginData | null>(null);
 
   const form = useForm<z.infer<typeof EditFormSchema>>({
     resolver: zodResolver(EditFormSchema),
@@ -50,42 +51,43 @@ export function EditProfileForm() {
     },
   });
 
-  // Fetch user data from localStorage when the dialog is opened
+  // ✨ 2. This useEffect is modified to read from sessionStorage and decode the JWT
   useEffect(() => {
     if (isOpen) {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
+      const token = sessionStorage.getItem('token');
+      if (token) {
         try {
-          const userData: User = JSON.parse(storedUser);
+          const userData: UserLoginData = jwtDecode(token);
           setCurrentUser(userData);
-          // Pre-fill the form with existing data
+          // Pre-fill the form with data from the token
           form.reset({
             name: userData.name,
             surname: userData.surname,
             phone: userData.phone,
-            password: "" // Keep password field empty for security
+            password: ""
           });
         } catch (error) {
-          console.error("Failed to parse user data", error);
+          console.error("Failed to decode token", error);
         }
       }
     }
   }, [isOpen, form]);
 
+  // ✨ 3. This onSubmit function is updated to send an authorized request
   async function onSubmit(data: z.infer<typeof EditFormSchema>) {
-    if (!currentUser) {
+    const token = sessionStorage.getItem('token');
+    if (!currentUser || !token) {
       toast.error("User not found. Please log in again.");
       return;
     }
 
     const toastId = toast.loading("Updating profile...");
 
-    // Prepare only the data that has changed
     const changedData: Partial<z.infer<typeof EditFormSchema>> = {};
     if (data.name !== currentUser.name) changedData.name = data.name;
     if (data.surname !== currentUser.surname) changedData.surname = data.surname;
     if (data.phone !== currentUser.phone) changedData.phone = data.phone;
-    if (data.password) changedData.password = data.password;
+    if (data.password && data.password.length > 0) changedData.password = data.password;
 
     if (Object.keys(changedData).length === 0) {
         toast.info("No changes were made.", { id: toastId });
@@ -94,11 +96,13 @@ export function EditProfileForm() {
     }
 
     try {
-        console.log(changedData);
-        
       const response = await fetch(`http://localhost:6969/users/${currentUser.id}`, {
-        method: 'PUT', // PATCH is ideal for partial updates
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            // Add the Authorization header to authenticate the request
+            'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(changedData),
       });
 
@@ -107,17 +111,18 @@ export function EditProfileForm() {
         throw new Error(errorResult.message || "Failed to update profile.");
       }
 
-      const updatedUser = await response.json();
+      const updateResult = await response.json(); // Expects { message, token }
 
-      // Update localStorage with the new user data
-      localStorage.setItem('user', JSON.stringify(updatedUser.user));
+      // ✨ 4. Update sessionStorage with the new token from the API
+      if (updateResult.token) {
+        sessionStorage.setItem('token', updateResult.token);
+      }
 
       toast.success("Profile updated successfully!", { id: toastId });
-      setIsOpen(false); // Close the dialog
-      // Optionally, refresh the page to reflect changes everywhere
+      setIsOpen(false);
       setTimeout(() => {
         window.location.reload();
-      }, 1500);
+      }, 1000);
 
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -131,11 +136,11 @@ export function EditProfileForm() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {/* This button can be placed anywhere, like in a user dropdown menu */}
-        <Button variant="outline">
-            <UserIcon className="mr-2 h-4 w-full" />
-            แก้ไขข้อมูลส่วนตัว
-        </Button>
+        {/* ✨ 5. Changed to a DropdownMenuItem for better UI consistency in your Navbar */}
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>แก้ไขข้อมูลส่วนตัว</span>
+        </DropdownMenuItem>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px]">
@@ -148,6 +153,7 @@ export function EditProfileForm() {
               </DialogDescription>
             </DialogHeader>
 
+            {/* The rest of the form fields remain the same */}
             <FormField
               control={form.control}
               name="name"

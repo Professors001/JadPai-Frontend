@@ -156,19 +156,22 @@ export function LoginForm({
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      const result = await response.json(); // Expects a response like { message, token }
 
       if (!response.ok) {
-        throw new Error(result.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        // Use the 'message' field from your API's error response
+        throw new Error(result.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
       }
 
-      // Store user data from the successful response
-      if (result.user) {
-        localStorage.setItem('user', JSON.stringify(result.user));
-      }
-      
+      // The API now returns only a token, which contains the user data.
+      // We store this single token in localStorage.
       if (result.token) {
-        localStorage.setItem('token', result.token);
+        console.log("Token:", result.token);
+        
+        sessionStorage.setItem('token', result.token);
+      } else {
+        // Handle case where login is successful but no token is returned
+        throw new Error("Login successful but no token was provided.");
       }
 
       toast.success("เข้าสู่ระบบสำเร็จ!", {
@@ -176,6 +179,7 @@ export function LoginForm({
         id: toastId,
       });
 
+      // Redirect after a successful login
       setTimeout(() => {
         window.location.href = '/events';
       }, 1000);

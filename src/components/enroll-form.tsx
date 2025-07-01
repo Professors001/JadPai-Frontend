@@ -1,10 +1,11 @@
-"use client";
+"use client"
 
 import React, { useState, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
 import { toast } from "sonner";
+import { jwtDecode } from "jwt-decode"; // ✨ 1. Import jwt-decode
 
 import {
   Form,
@@ -25,9 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { User } from "@/interfaces/User";
 
-// Define constants for file validation
 const MAX_FILE_SIZE = 5000000; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -50,13 +49,11 @@ interface EnrollFormProps {
 }
 
 export function EnrollForm({ eventId }: EnrollFormProps) {
-  // 2. Add state for dialog control and to store the current user
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserLoginData | null>(null);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    // Default values will be populated by useEffect later
     defaultValues: {
       name: "",
       phone: "",
@@ -65,29 +62,33 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
     },
   });
 
-  // 3. Use useEffect to read user data from localStorage when the component mounts
+  // ✨ 2. This useEffect now reads the token from sessionStorage
   useEffect(() => {
-    const storedUserJson = localStorage.getItem('user');
-    if (storedUserJson) {
-      try {
-        const user: User = JSON.parse(storedUserJson);
-        setCurrentUser(user);
+    // This effect runs when the dialog opens to pre-fill data
+    if (isOpen) {
+        const token = sessionStorage.getItem('token');
+        if (token) {
+            try {
+                const user: UserLoginData = jwtDecode(token);
+                setCurrentUser(user);
 
-        // 4. Pre-fill the form with the user's data
-        form.reset({
-          name: `${user.name} ${user.surname}`,
-          phone: user.phone,
-          email: user.email,
-        });
-      } catch (e) {
-        console.error("Failed to parse user data from localStorage", e);
-      }
+                // Pre-fill the form with the user's data from the token
+                form.reset({
+                    name: `${user.name} ${user.surname}`,
+                    phone: user.phone,
+                    email: user.email,
+                });
+            } catch (e) {
+                console.error("Failed to decode token from sessionStorage", e);
+            }
+        }
     }
-  }, [form]); // Rerun if the form instance changes
+  }, [isOpen, form]);
 
+  // ✨ 3. The onSubmit function now sends an authorized request
   async function onSubmit(data: z.infer<typeof FormSchema>) {
-    // 5. Ensure we have user data before submitting
-    if (!currentUser) {
+    const token = sessionStorage.getItem('token');
+    if (!currentUser || !token) {
       toast.error("ไม่พบข้อมูลผู้ใช้", { description: "กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง" });
       return;
     }
@@ -99,15 +100,17 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
     formData.append("phone", data.phone);
     formData.append("email", data.email);
     formData.append("picture", data.picture[0]);
-    
-    // 6. Use the user ID from the state
     formData.append("userId", String(currentUser.id)); 
     formData.append("eventId", eventId);
 
     try {
         const response = await fetch("http://localhost:6969/enrollments/enroll", {
             method: "POST",
-            body: formData,
+            headers: {
+                // Add the Authorization header for protected endpoints
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData, // When using FormData, the browser sets the Content-Type header automatically
         });
 
         if (!response.ok) {
@@ -116,14 +119,12 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
         }
 
         toast.success("สมัครเข้าร่วมกิจกรรมสำเร็จ!", { id: toastId });
-        setIsOpen(false); // Close dialog on success
-        // Optionally reset the picture field manually if needed
+        setIsOpen(false);
         form.reset({ ...form.getValues(), picture: undefined });
 
         setTimeout(() => {
           window.location.reload();
         }, 1500);
-
 
     } catch (error) {
         console.error("Form submission failed:", error);
@@ -134,6 +135,7 @@ export function EnrollForm({ eventId }: EnrollFormProps) {
     }
   }
 
+  // The JSX for the form remains the same
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
