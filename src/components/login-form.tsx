@@ -25,7 +25,6 @@ declare global {
   }
 }
 
-// 1. Define the validation schema using Zod
 const FormSchema = z.object({
   email: z.string().email({
     message: "รูปแบบอีเมลไม่ถูกต้อง",
@@ -39,7 +38,6 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  // 2. Initialize the form with react-hook-form and Zod
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -48,15 +46,13 @@ export function LoginForm({
     },
   });
 
-  // 3. Initialize Google Sign-In when component mounts
   useEffect(() => {
-    // Load Google Identity Services script
+    // ... (Google script initialization logic is unchanged)
     const loadGoogleScript = () => {
       if (window.google) {
         initializeGoogleSignIn();
         return;
       }
-
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
@@ -64,53 +60,44 @@ export function LoginForm({
       script.onload = initializeGoogleSignIn;
       document.head.appendChild(script);
     };
-
     const initializeGoogleSignIn = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID, // Add this to your .env.local
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleGoogleSignIn,
           use_fedcm_for_prompt: true,
         });
       }
     };
-
     loadGoogleScript();
-
     return () => {
-      // Cleanup script if needed
       const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      if (script) {
-        script.remove();
-      }
+      if (script) script.remove();
     };
   }, []);
 
-  // 4. Handle Google Sign-In response
+  // 👇 THIS FUNCTION HAS BEEN MODIFIED
   const handleGoogleSignIn = async (response: any) => {
     const toastId = toast.loading("กำลังเข้าสู่ระบบด้วย Google...");
 
     try {
-      console.log("try to backend with oauth");
       const result = await fetch('http://localhost:6969/users/auth/google', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: response.credential }),
       });
 
-      const data = await result.json();
-
-      
+      const data = await result.json(); // Expects { message, token }
 
       if (!result.ok) {
-        throw new Error(data.error || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+        throw new Error(data.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
       }
 
-      // Store user data
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+      // Store the returned token in sessionStorage
+      if (data.token) {
+        sessionStorage.setItem('token', data.token);
+      } else {
+        throw new Error("Login successful but no token was provided.");
       }
 
       toast.success("เข้าสู่ระบบสำเร็จ!", {
@@ -118,7 +105,6 @@ export function LoginForm({
         id: toastId,
       });
 
-      // Redirect after success
       setTimeout(() => {
         window.location.href = '/events';
       }, 1000);
@@ -132,7 +118,6 @@ export function LoginForm({
     }
   };
 
-  // 5. Handle Google Sign-In button click
   const handleGoogleButtonClick = () => {
     if (window.google) {
       window.google.accounts.id.prompt();
@@ -143,34 +128,25 @@ export function LoginForm({
     }
   };
 
-  // 6. Regular form submission (existing functionality)
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     const toastId = toast.loading("กำลังเข้าสู่ระบบ...");
 
     try {
       const response = await fetch('http://localhost:6969/users/auth', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
-      const result = await response.json(); // Expects a response like { message, token }
+      const result = await response.json();
 
       if (!response.ok) {
-        // Use the 'message' field from your API's error response
         throw new Error(result.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
       }
 
-      // The API now returns only a token, which contains the user data.
-      // We store this single token in localStorage.
       if (result.token) {
-        console.log("Token:", result.token);
-        
         sessionStorage.setItem('token', result.token);
       } else {
-        // Handle case where login is successful but no token is returned
         throw new Error("Login successful but no token was provided.");
       }
 
@@ -179,7 +155,6 @@ export function LoginForm({
         id: toastId,
       });
 
-      // Redirect after a successful login
       setTimeout(() => {
         window.location.href = '/events';
       }, 1000);
