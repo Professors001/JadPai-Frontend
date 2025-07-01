@@ -202,26 +202,6 @@ export const handleDownloadTicket = async (
     
     toast.success("ดาวน์โหลดบัตรเรียบร้อยแล้ว", { id: toastId });
 
-    // Option 2: If you need fresh data from API, uncomment below:
-    /*
-    // Fetch fresh enrollment data
-    const response = await fetch(`http://localhost:6969/enrollments/${enrollment.id}`);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Could not fetch enrollment data.');
-    }
-
-    const freshEnrollmentData: EnrollmentWithEvent = await response.json();
-    
-    // Generate PDF with fresh data
-    const doc = generateEnrollmentPDF(freshEnrollmentData);
-    const filename = `ticket-${freshEnrollmentData.event.name.replace(/\s+/g, '-')}-${freshEnrollmentData.id.substring(0, 8)}.pdf`;
-    doc.save(filename);
-    
-    toast.success("ดาวน์โหลดบัตรเรียบร้อยแล้ว", { id: toastId });
-    */
-
   } catch (error) {
     console.error('Download failed:', error);
     toast.error('ดาวน์โหลดไม่สำเร็จ', { 
@@ -280,7 +260,10 @@ export function JoinedEventCard({
     try {
         const res = await fetch(`http://localhost:6969/enrollments/${enrollment.id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}` 
+            },
             body: JSON.stringify({ status: 'cancelled' })
         });
 

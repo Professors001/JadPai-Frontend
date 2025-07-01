@@ -41,7 +41,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`http://localhost:6969/enrollments/events/${eventId}`);
+                const res = await fetch(`http://localhost:6969/enrollments/events/${eventId}` , {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+                    },
+                });
                 if (!res.ok) {
                     throw new Error('Failed to fetch Enrollment');
                 }

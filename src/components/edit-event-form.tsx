@@ -62,7 +62,10 @@ export function EditEventForm({ event }: { event: EventDtos }) {
     try {
         const response = await fetch(`http://localhost:6969/events/${event.id}`, {
             method: 'PUT', // PATCH is best for partial updates
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+             },
             body: JSON.stringify(changedData),
         });
 

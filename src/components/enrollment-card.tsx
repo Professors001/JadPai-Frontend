@@ -67,6 +67,7 @@ const EnrollmentCard: React.FC<EnrollCardProps> = ({
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
             },
             body: JSON.stringify({ newStatus: newStatus }),
         });

@@ -73,7 +73,15 @@ export default function EventsPage() {
 
     async function fetchEvents(currentUserId: string) {
         try {
-            const res = await fetch(`http://localhost:6969/events/users/${currentUserId}/not_attending`);
+            const res = await fetch(`http://localhost:6969/events/users/${currentUserId}/not_attending`
+                , {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+                    },
+                }
+            );
             if (!res.ok) throw new Error('Failed to fetch Events');
             const resJson = await res.json();
             setEvents(resJson || []);
@@ -84,7 +92,13 @@ export default function EventsPage() {
 
     async function fetchEnrollment(currentUserId: string) {
         try {
-            const res = await fetch(`http://localhost:6969/enrollments/users/${currentUserId}`);
+            const res = await fetch(`http://localhost:6969/enrollments/users/${currentUserId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+                    },
+                });
             if (!res.ok) throw new Error('Failed to fetch Enrollment');
             const resJson = await res.json();
             setEnrollments(resJson || []);
